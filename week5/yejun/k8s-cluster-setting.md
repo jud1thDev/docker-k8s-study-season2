@@ -4,17 +4,16 @@
 ### Master, Worker 노드 공통 구성
 1. swap off하기
     
-    ```jsx
-    #swapoff -a
-    #sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-    ```
+```jsx
+swapoff -a
+sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+```
+
 2. CRI 설치 전 네트워크 구성하기 (런타임을 사용 가능한 상태로 만들기 위한 사전 설정)
 
 ```jsx
 // https://kubernetes.io/ko/docs/setup/production-environment/container-runtimes/
-echo '======== [6] 컨테이너 런타임 설치 ========'
-echo '======== [6-1] 컨테이너 런타임 설치 전 사전작업 ========'
-echo '======== [6-1] iptable 세팅 ========'
+
 cat <<EOF |tee /etc/modules-load.d/k8s.conf
 overlay
 br_netfilter
@@ -189,5 +188,68 @@ kubeadm join 172.31.0.7:6443 --token puxczb.h6nl5k7ddse2s45e \
 kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.28.5/manifests/tigera-operator.yaml
 curl -O https://raw.githubusercontent.com/projectcalico/calico/v3.28.5/manifests/custom-resources.yaml
 // custom-resources.yaml에서 cidr을 수정
+spec:
+  # Configures Calico networking.
+  calicoNetwork:
+    ipPools:
+    - name: default-ipv4-ippool
+      blockSize: 26
+      cidr: 10.0.0.0/16	// 해당 부분 수정!
+      encapsulation: VXLANCrossSubnet
+      natOutgoing: Enabled
+      nodeSelector: all()
 
+kubectl create -f custom-resources.yaml
 ```
+
+4. 정상 구동 확인
+```jsx
+kubectl get nodes
+NAME         STATUS   ROLES           AGE   VERSION
+k8s-master   Ready    control-plane   96s   v1.34.2
+
+kubectl get pods -A
+NAMESPACE          NAME                                       READY   STATUS    RESTARTS   AGE
+calico-apiserver   calico-apiserver-5895dc67b5-dml95          1/1     Running   0          89s
+calico-apiserver   calico-apiserver-5895dc67b5-jgst5          1/1     Running   0          89s
+calico-system      calico-kube-controllers-78d695f87f-hbqsn   1/1     Running   0          88s
+calico-system      calico-node-jfphp                          1/1     Running   0          88s
+calico-system      calico-typha-6f4f89c7db-rbnpw              1/1     Running   0          88s
+calico-system      csi-node-driver-2cfzj                      2/2     Running   0          88s
+kube-system        coredns-66bc5c9577-4qthr                   1/1     Running   0          2m23s
+kube-system        coredns-66bc5c9577-cthf8                   1/1     Running   0          2m23s
+kube-system        etcd-k8s-master                            1/1     Running   0          2m29s
+kube-system        kube-apiserver-k8s-master                  1/1     Running   0          2m29s
+kube-system        kube-controller-manager-k8s-master         1/1     Running   0          2m30s
+kube-system        kube-proxy-qg6gx                           1/1     Running   0          2m23s
+kube-system        kube-scheduler-k8s-master                  1/1     Running   0          2m31s
+tigera-operator    tigera-operator-557dd45969-tmxkf           1/1     Running   0          2m1s
+
+kubectl get ns
+NAME               STATUS   AGE
+calico-apiserver   Active   3m30s
+calico-system      Active   3m30s
+default            Active   4m33s
+kube-node-lease    Active   4m33s
+kube-public        Active   4m33s
+kube-system        Active   4m33s
+tigera-operator    Active   4m3s
+```
+
+### Worker 구성 작업
+
+1. join 요청
+
+```jsx
+kubeadm join 172.31.0.4:6443 --token e55xh3.39lftgzppboc72sm \
+	--discovery-token-ca-cert-hash sha256:4c72cb3407f6f6dc4a615651a377941942dfbefd624409b5c3270e240a82f5a6
+```
+
+2. master에서 노드 확인
+```jsx
+kubectl get nodes
+NAME             STATUS   ROLES           AGE     VERSION
+k8s-worker1		 Ready    <none>          4m26s   v1.34.2
+k8s-master       Ready    control-plane   33m     v1.34.2
+```
+
