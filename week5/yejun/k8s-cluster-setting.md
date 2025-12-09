@@ -39,14 +39,14 @@ sysctl --system
 // Before you install Docker Engine for the first time on a new host machine, you need to set up the Docker apt repository. Afterward, you can install and update Docker from the repository.
 
 // Set up Docker's apt repository.
-# Add Docker's official GPG key:
+// Add Docker's official GPG key:
 sudo apt update
 sudo apt install ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-# Add the repository to Apt sources:
+// Add the repository to Apt sources:
 sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
 Types: deb
 URIs: https://download.docker.com/linux/ubuntu
@@ -61,10 +61,11 @@ sudo apt update
 // Specific version - 호환버전은 공식문서 참고!
 // https://containerd.io/releases/
 // To install a specific version of Docker Engine, start by listing the available versions in the repository:
-apt list --all-versions docker-ce
-docker-ce/noble 5:29.1.2-1~ubuntu.24.04~noble <arch>
-docker-ce/noble 5:29.1.1-1~ubuntu.24.04~noble <arch>
-...
+// ex
+// apt list --all-versions docker-ce
+// docker-ce/noble 5:29.1.2-1~ubuntu.24.04~noble <arch>
+// docker-ce/noble 5:29.1.1-1~ubuntu.24.04~noble <arch>
+// ...
 
 // kubernetes 버전 1.34를 기준으로 버전 고정하기
 sudo apt install -y \
@@ -82,37 +83,34 @@ sudo apt-mark hold \
   docker-compose-plugin
 
 // Latest
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+// sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 ```
 
 4. **cgroup 드라이버 설정하기**
     1. default가 cgroupfs이지만, OS에서 init을 systemd로 사용한다면 호환성을위해 systemd로 변경해주기
     
-    ```jsx
-    #ps -p 1 -o comm=
-    // systemd인 경우 호환성을 위해 변경해주기
-    // Kubernetes 공식문서에서 kubelet 과 컨테이너 런타임(containerd, CRI-O)의 cgroup driver를 systemd 로 일치시킬 것을 권장
-    ```
+```jsx
+ps -p 1 -o comm=
+// systemd인 경우 호환성을 위해 변경해주기
+// Kubernetes 공식문서에서 kubelet 과 컨테이너 런타임(containerd, CRI-O)의 cgroup driver를 systemd 로 일치시킬 것을 권장
+```
     
-
 systemd cgroup 드라이버 환경 설정하기 
 
 ```jsx
-//etc/containerd/config.toml 의 systemd cgroup 드라이버를 runc 에서 사용하려면, 다음과 같이 설정한다.
+//etc/containerd/config.toml 의 systemd cgroup 드라이버를 runc 에서 사용하려면, 다음과 같이 설정
 sudo rm /etc/containerd/config.toml
 sudo containerd config default | sudo tee /etc/containerd/config.toml
 
-// /etc/containerd/config.toml에서 수정하기
+// /etc/containerd/config.toml에서 수정해야 함
 [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
   ...
   [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
-    SystemdCgroup = true
-    
-# systemctl restart containerd 
-    
-// 스크립트화
+    SystemdCgroup = true 
+
 // containerd config default > /etc/containerd/config.toml
+// 아래 명령어를 통해 수정
 sudo rm /etc/containerd/config.toml
 sudo containerd config default | sudo tee /etc/containerd/config.toml
 sed -i 's/ SystemdCgroup = false/ SystemdCgroup = true/' /etc/containerd/config.toml
@@ -137,6 +135,12 @@ sudo apt-get install -y kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 
 sudo systemctl enable --now kubelet
+
+// kublet cgroup driver 점검
+grep cgroupDriver /var/lib/kubelet/config.yaml
+// systemd가 아닐경우 변경
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
 ```
 
 6. 쿠버네티스 편의기능
@@ -165,7 +169,7 @@ source ~/.bashrc
 1. 클러스터 init 구성
 ```jsx
 // Phase별 args는 [공식문서 참고](https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-init/)
-kubeadm init --pod-network-cidr=172.31.32.0/19 --apiserver-advertise-address 172.31.0.7
+kubeadm init --pod-network-cidr=10.0.0.0/16 --apiserver-advertise-address 172.31.0.4
 ```
 
 2. kubectl 설정
