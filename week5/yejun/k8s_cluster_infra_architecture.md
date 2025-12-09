@@ -6,6 +6,9 @@
 해당 아키텍처를 기반으로 AWS의 리소스를 활용하여 구현 단, OKE와 같은 EKS 리소스가 아닌 직접 클러스터 인프라 환경 성
 
 # AWS Resource Architecture
+<img width="798" height="942" alt="2" src="https://github.com/user-attachments/assets/daf4c81f-8616-43c1-a208-10da6ac113c8" />
+
+___
 # VPN 구성 정보
 
 | 항목 | 값 |
@@ -16,7 +19,6 @@
 | **DNS Hostnames** | Enabled |
 | **Internet Gateway** | internet-gateway-0 |
 | **NAT Gateway** | nat-gateway-0 |
-| **Service Gateway** | service-gateway-0 |
 | **VPC Endpoints** | All relevant AWS Services via Gateway/Interface Endpoints (초기구성 시 필요 서비스만 지정 (s3)) |
 | **DHCP Options** | Default DHCP Option Set |
 
@@ -33,7 +35,7 @@
 | **Subnet Access** | Private |
 | **DNS Resolution** | Selected |
 | **DHCP Options** | Default |
-| **Security Group / NACL** | sg-k8s-api-endpoint / nacl-k8s-api |
+| **Security Group** | sg-k8s-api-endpoint |
 
 ---
 
@@ -48,22 +50,7 @@
 | **Subnet Access** | Private |
 | **DNS Resolution** | Selected |
 | **DHCP Options** | Default |
-| **Security Group / NACL** | sg-worker-nodes / nacl-worker |
-
----
-
-## Private Subnet for Pods
-
-| 항목 | 값 |
-|------|-----|
-| **Name** | pods |
-| **Type** | Regional |
-| **CIDR Block** | 172.31.32.0/19 |
-| **Route Table** | rtb-pods |
-| **Subnet Access** | Private |
-| **DNS Resolution** | Selected |
-| **DHCP Options** | Default |
-| **Security Group / NACL** | sg-pods / nacl-pods |
+| **Security Group** | sg-worker-nodes |
 
 ---
 
@@ -78,11 +65,11 @@
 | **Subnet Access** | Public |
 | **DNS Resolution** | Selected |
 | **DHCP Options** | Default |
-| **Security Group / NACL** | sg-lb / nacl-lb |
+| **Security Group** | sg-lb |
 
 ---
 
-## Private Subnet for Bastion
+## Public Subnet for Bastion
 
 | 항목 | 값 |
 |------|-----|
@@ -92,7 +79,7 @@
 | **Subnet Access** | Private |
 | **DNS Resolution** | Selected |
 | **DHCP Options** | Default |
-| **Security Group / NACL** | sg-bastion / nacl-bastion |
+| **Security Group** | sg-bastion |
 
 # AWS Route Table 구성 정보
 
@@ -148,7 +135,7 @@
 |------|-----|
 | **Name** | rtb-loadbalancers |
 
-### 🔹 Route Rules
+### Route Rules
 
 | Destination | Target |
 |-------------|---------|
@@ -167,6 +154,7 @@
 | 172.31.32.0/19 | TCP      | 6443  | Pod → API Server (CNI가 VPC native일 때)    |
 | 172.31.32.0/19 | TCP      | 12250 | Pod → API Server                         |
 | Bastion CIDR | TCP      | 6443  | (Optional) Bastion → API Server admin 접근 |
+| Bastion CIDR | TCP      | 22          | (Optional) SSH to Worker Nodes    |
 
 ### Egress
 | Destination         | Protocol | Port  | Description                       |
@@ -201,25 +189,6 @@
 | 172.31.0.0/29         | TCP      | 6443  | Worker → API Server        |
 | 172.31.0.0/29         | TCP      | 12250 | Worker → API Server        |
 
-## sg-pods
-
-### Ingress
-| Source       | Protocol | Port | Description       |
-| ------------ | -------- | ---- | ----------------- |
-| 172.31.1.0/24  | ALL      | ALL  | Worker → Pods     |
-| 172.31.0.0/29  | ALL      | ALL  | API Server → Pods |
-| 172.31.32.0/19 | ALL      | ALL  | Pod-to-Pod        |
-
-### Egress
-| Destination         | Protocol | Port  | Description                         |
-| ------------------- | -------- | ----- | ----------------------------------- |
-| 172.31.32.0/19        | ALL      | ALL   | Pod ↔ Pod                           |
-| AWS Services (VPCE) | ICMP     | 3,4   | Path Discovery                      |
-| AWS Services (VPCE) | TCP      | ALL   | Pods → AWS Services                 |
-| 0.0.0.0/0           | TCP      | 443   | (Optional) Internet egress (NAT 기반) |
-| 172.31.0.0/29         | TCP      | 6443  | Pods → API Server                   |
-| 172.31.0.0/29         | TCP      | 12250 | Pods → API Server                   |
-
 ## sg-loadbalancers
 
 ### Ingress
@@ -235,10 +204,15 @@
 
 ## sg-bastion
 
+### Ingress
+| Source                     | Protocol | Port         | Description              |
+| -------------------------- | -------- | ------------ | ------------------------ |
+| 0.0.0.0/0 | TCP  | 22 | (Optional) SSH  |
+
 ### Egress
 | Destination | Protocol | Port | Description               |
 | ----------- | -------- | ---- | ------------------------- |
 | 172.31.0.0/29 | TCP      | 6443 | (Optional) kubectl API 호출 |
+| 172.31.0.0/29 | TCP  | 22 | (Optional) SSH to api-endpoints |
 | 172.31.1.0/24 | TCP      | 22   | (Optional) SSH to Worker  |
-
 
