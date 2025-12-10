@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emptydir
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: emptydir
+  template:
+    metadata:
+      labels:
+        app: emptydir
+    spec:
+      volumes:
+      - name: shared-vol
+        emptyDir: {}
+      containers:
+      # 첫 번째 컨테이너: 데이터를 쓰는 역할
+      - name: c1-writer
+        image: busybox
+        args: ['tail', '-f', '/dev/null']
+        volumeMounts:
+        - name: shared-vol
+          mountPath: /shared-data
+      # 두 번째 컨테이너: 데이터를 읽는 역할
+      - name: c2-reader
+        image: busybox
+        args: ['tail', '-f', '/dev/null']
+        volumeMounts:
+        - name: shared-vol
+          mountPath: /read-data

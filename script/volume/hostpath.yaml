@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostpath
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hostpath
+  template:
+    metadata:
+      labels:
+        app: hostpath
+    spec:
+      volumes:
+      - name: host-vol
+        hostPath:
+          path: /tmp/k8s-hostpath-lab  # 실제 노드의 경로
+          type: DirectoryOrCreate  # 경로가 없으면 생성
+      containers:
+      - name: hostpath-container
+        image: busybox
+        args: ['tail', '-f', '/dev/null']
+        volumeMounts:
+        - name: host-vol
+          mountPath: /container-data
