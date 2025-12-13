@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-backend
+  labels:
+    app: k8s-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-backend
+  template:
+    metadata:
+      labels:
+        app: k8s-backend
+    spec:
+      containers:
+      - name: k8s-backend
+        image: k8s-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: h2-storage
+          mountPath: /data
+      volumes:
+      - name: h2-storage
+        persistentVolumeClaim:
+          claimName: h2-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-backend-service
+  labels:
+    app: k8s-backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    app: k8s-backend
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: k8s-backend-ingress
+  labels:
+    app: k8s-backend
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: backend.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: k8s-backend-service
+            port:
+              number: 8080
+
