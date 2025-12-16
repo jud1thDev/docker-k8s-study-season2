@@ -19,10 +19,6 @@ WORKDIR /app
 # Copy the built JAR from builder stage
 COPY --from=builder /app/target/*.jar app.jar
 
-# Create data directory for H2 database
-RUN mkdir -p /data
-
 EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
