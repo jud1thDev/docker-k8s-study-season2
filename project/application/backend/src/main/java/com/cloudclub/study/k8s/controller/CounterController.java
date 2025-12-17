@@ -56,7 +56,7 @@ public class CounterController {
             @ApiResponse(responseCode = "200", description = "성공적으로 백엔드 상태를 확인했습니다.")
     })
     public ResponseEntity<String> ping() {
-        return ResponseEntity.ok("pong from backend");
+        return ResponseEntity.ok("pong from backend\n");
     }
 }
 
