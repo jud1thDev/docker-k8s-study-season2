@@ -21,7 +21,7 @@ public class CounterController {
     private final CounterService counterService;
 
     @GetMapping("/count")
-    @Operation(summary = "현재 카운터 조회", description = "H2 데이터베이스의 현재 카운터 값을 조회합니다.")
+    @Operation(summary = "현재 카운터 조회", description = "데이터베이스의 현재 카운터 값을 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "성공적으로 카운터 값을 조회했습니다.")
     })
@@ -31,7 +31,7 @@ public class CounterController {
     }
 
     @PostMapping("/increment")
-    @Operation(summary = "카운터 증가", description = "H2 데이터베이스의 카운터 값을 1 증가시킵니다.")
+    @Operation(summary = "카운터 증가", description = "데이터베이스의 카운터 값을 1 증가시킵니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "성공적으로 카운터가 증가되었습니다.")
     })
@@ -41,13 +41,22 @@ public class CounterController {
     }
 
     @DeleteMapping("/reset")
-    @Operation(summary = "데이터 리셋", description = "H2 데이터베이스의 모든 카운터 데이터를 삭제합니다.")
+    @Operation(summary = "데이터 리셋", description = "데이터베이스의 모든 카운터 데이터를 삭제합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "성공적으로 모든 데이터가 삭제되었습니다.")
     })
     public ResponseEntity<Map<String, String>> reset() {
         counterService.deleteAll();
         return ResponseEntity.ok(Map.of("message", "All data deleted"));
+    }
+
+    @GetMapping("/ping")
+    @Operation(summary = "백엔드 상태 확인", description = "백엔드 서비스가 정상적으로 동작하는지 확인합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "성공적으로 백엔드 상태를 확인했습니다.")
+    })
+    public ResponseEntity<String> ping() {
+        return ResponseEntity.ok("pong from backend");
     }
 }
 
